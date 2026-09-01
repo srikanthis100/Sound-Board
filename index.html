@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Android Soundboard - Multi-Board</title>
+  <style>
+    * { box-sizing: border-box; font-family: sans-serif; }
+    body { background-color: #121212; color: #fff; text-align: center; margin: 0; padding: 20px; }
+    
+    .board-bar {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      max-width: 500px;
+      margin: 0 auto 15px auto;
+      background: #1e1e1e;
+      padding: 10px;
+      border-radius: 12px;
+      border: 1px solid #333;
+    }
+
+    .board-select {
+      background: #2a2a2a;
+      color: #00e676;
+      border: 1px solid #444;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: bold;
+      flex-grow: 1;
+      outline: none;
+    }
+
+    .icon-btn {
+      background: #333;
+      color: #fff;
+      border: 1px solid #555;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .icon-btn.delete-board { background: #cf6679; color: #000; border: none; }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 500px;
+      margin: 0 auto 15px auto;
+    }
+    
+    h1 { margin: 0; font-size: 22px; }
+
+    .lock-btn {
+      background: #333;
+      color: #fff;
+      border: 1px solid #555;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .lock-btn.unlocked {
+      background: #ff9800;
+      color: #000;
+      border-color: #f57c00;
+      font-weight: bold;
+    }
+
+    p { font-size: 12px; opacity: 0.8; margin-bottom: 20px; }
+    
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    .tile {
+      background: #2a2a2a;
+      border: 2px solid #333;
+      border-radius: 12px;
+      padding: 12px 10px;
+      font-size: 15px;
+      font-weight: bold;
+      color: #ccc;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 180px;
+      max-height: 220px;
+      position: relative;
+    }
+
+    .tile-title-input {
+      background: transparent;
+      border: 1px solid transparent;
+      color: #00e676;
+      font-size: 14px;
+      font-weight: bold;
+      text-align: center;
+      width: 100%;
+      outline: none;
+      border-radius: 4px;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    body.unlocked-mode .tile-title-input {
+      pointer-events: auto;
+      border-color: rgba(255, 152, 0, 0.5);
+      background: rgba(0, 0, 0, 0.3);
+      color: #fff;
+      padding: 2px 4px;
+    }
+
+    .original-filename {
+      font-size: 11px;
+      color: #aaa;
+      font-weight: normal;
+      margin-top: 4px;
+      word-break: break-word;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      line-height: 1.2;
+      max-width: 100%;
+    }
+
+    .tile.active {
+      background: #00e676;
+      color: #000;
+      border-color: #00c853;
+      box-shadow: 0 0 12px rgba(0, 230, 118, 0.5);
+    }
+
+    .tile.active .tile-title-input {
+      color: #000;
+    }
+
+    .tile.active .original-filename {
+      color: #222;
+    }
+
+    .tile.add-tile-btn {
+      border: 2px dashed #00e676;
+      color: #00e676;
+      justify-content: center;
+      font-size: 18px;
+      background: rgba(0, 230, 118, 0.05);
+      min-height: 180px;
+    }
+
+    .tile input[type="file"] { display: none; }
+    .status { font-size: 10px; margin-top: 2px; opacity: 0.6; }
+    
+    .delete-btn {
+      display: none;
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      background: #cf6679;
+      color: #000;
+      border: none;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .reorder-controls {
+      display: none;
+      gap: 10px;
+      margin-bottom: 5px;
+    }
+
+    .reorder-btn {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      padding: 2px 10px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    body.unlocked-mode .delete-btn,
+    body.unlocked-mode .reorder-controls { display: flex; }
+
+    body.unlocked-mode .tile:not(.add-tile-btn) {
+      border-style: dashed;
+      border-color: #ff9800;
+    }
+
+    .controls {
+      margin-top: 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      width: 100%;
+    }
+
+    .loop-toggle {
+      display: flex;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-size: 11px;
+    }
+
+    .volume-container {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      width: 90%;
+      font-size: 11px;
+    }
+
+    .volume-slider {
+      flex-grow: 1;
+      accent-color: #00e676;
+      cursor: pointer;
+      height: 4px;
+    }
+
+    .tile.active .volume-slider {
+      accent-color: #000;
+    }
+
+    .footer-settings {
+      max-width: 500px;
+      margin: 30px auto 10px auto;
+      padding-top: 15px;
+      border-top: 1px solid #222;
+    }
+
+    .settings-toggle-btn {
+      background: none;
+      border: none;
+      color: #666;
+      font-size: 12px;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    .settings-panel {
+      display: none;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 10px;
+      font-size: 12px;
+      color: #aaa;
+    }
+
+    .settings-panel.open { display: block; }
+
+    .danger-zone {
+      margin-top: 10px;
+      padding: 10px;
+      background: rgba(207, 102, 121, 0.1);
+      border: 1px dashed #cf6679;
+      border-radius: 6px;
+    }
+
+    .clear-btn {
+      background: #555;
+      color: #888;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: bold;
+      margin-top: 8px;
+      cursor: not-allowed;
+    }
+
+    .clear-btn.unlocked {
+      background: #cf6679;
+      color: #000;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="board-bar">
+    <select id="boardSelect" class="board-select"></select>
+    <button class="icon-btn" id="newBoardBtn" title="Create Board">＋</button>
+    <button class="icon-btn" id="renameBoardBtn" title="Rename Board">✏️</button>
+    <button class="icon-btn delete-board" id="deleteBoardBtn" title="Delete Board">🗑</button>
+  </div>
+
+  <div class="header">
+    <h1>Soundboard</h1>
+    <button class="lock-btn" id="lockBtn">🔒 Locked</button>
+  </div>
+  <p id="instructionText">Tap tile to play/stop. Hold tile to change sound.</p>
+  
+  <div class="grid" id="soundGrid"></div>
+
+  <div class="footer-settings">
+    <button class="settings-toggle-btn" id="toggleSettingsBtn">⚙️ Advanced Settings</button>
+    <div class="settings-panel" id="settingsPanel">
+      <div class="danger-zone">
+        <strong style="color: #cf6679;">Danger Zone</strong>
+        <p style="margin: 5px 0 10px 0;">Erasing app data will permanently remove all boards, layouts, and saved audio.</p>
+        <label>
+          <input type="checkbox" id="confirmSafetyCheck"> I understand this will erase everything
+        </label>
+        <br>
+        <button class="clear-btn" id="clearStorage" disabled>Clear All App Data</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const grid = document.getElementById('soundGrid');
+    const lockBtn = document.getElementById('lockBtn');
+    const instructionText = document.getElementById('instructionText');
+    const boardSelect = document.getElementById('boardSelect');
+    const newBoardBtn = document.getElementById('newBoardBtn');
+    const renameBoardBtn = document.getElementById('renameBoardBtn');
+    const deleteBoardBtn = document.getElementById('deleteBoardBtn');
+    const toggleSettingsBtn = document.getElementById('toggleSettingsBtn');
+    const settingsPanel = document.getElementById('settingsPanel');
+    const confirmSafetyCheck = document.getElementById('confirmSafetyCheck');
+    const clearStorageBtn = document.getElementById('clearStorage');
+    
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    let isUnlocked = false;
+    let activeBoardId = "board_default";
+    let boardsList = [{ id: "board_default", name: "Main Board" }];
+    const DEFAULT_TILE_IDS = ["tile_1", "tile_2", "tile_3", "tile_4"];
+    let tileOrder = [...DEFAULT_TILE_IDS];
+
+    let activeAudioNodes = new Set();
+
+    function stopAllAudio() {
+      activeAudioNodes.forEach(item => {
+        try {
+          item.source.stop();
+          item.source.disconnect();
+          item.gainNode.disconnect();
+        } catch (e) {}
+      });
+      activeAudioNodes.clear();
+    }
+
+    lockBtn.addEventListener('click', () => {
+      isUnlocked = !isUnlocked;
+      if (isUnlocked) {
+        document.body.classList.add('unlocked-mode');
+        lockBtn.classList.add('unlocked');
+        lockBtn.innerHTML = "🔓 Unlocked";
+        instructionText.textContent = "Tap text to edit tile titles. Use ◀ ▶ to reorder.";
+      } else {
+        document.body.classList.remove('unlocked-mode');
+        lockBtn.classList.remove('unlocked');
+        lockBtn.innerHTML = "🔒 Locked";
+        instructionText.textContent = "Tap tile to play/stop. Hold tile to change sound.";
+      }
+      renderGrid();
+    });
+
+    toggleSettingsBtn.addEventListener('click', () => {
+      settingsPanel.classList.toggle('open');
+    });
+
+    confirmSafetyCheck.addEventListener('change', (e) => {
+      clearStorageBtn.disabled = !e.target.checked;
+      clearStorageBtn.classList.toggle('unlocked', e.target.checked);
+    });
+
+    let db;
+    const dbRequest = indexedDB.open("MultiBoardSoundboardDB_v5", 1);
+
+    dbRequest.onupgradeneeded = (e) => {
+      db = e.target.result;
+      if (!db.objectStoreNames.contains("sounds")) {
+        const soundStore = db.createObjectStore("sounds", { keyPath: "compositeKey" });
+        soundStore.createIndex("boardId", "boardId", { unique: false });
+      }
+      if (!db.objectStoreNames.contains("boards")) {
+        db.createObjectStore("boards", { keyPath: "id" });
+      }
+      if (!db.objectStoreNames.contains("settings")) {
+        db.createObjectStore("settings", { keyPath: "key" });
+      }
+
+      const boardStore = e.target.transaction.objectStore("boards");
+      boardStore.put({ id: "board_default", name: "Main Board" });
+      
+      const settingsStore = e.target.transaction.objectStore("settings");
+      settingsStore.put({ key: "activeBoardId", value: "board_default" });
+      settingsStore.put({ key: "layout_board_default", value: [...DEFAULT_TILE_IDS] });
+    };
+
+    dbRequest.onsuccess = (e) => {
+      db = e.target.result;
+      loadAppMetadata();
+    };
+
+    dbRequest.onerror = () => renderGrid();
+
+    function loadAppMetadata() {
+      if (!db) return renderGrid();
+      
+      const tx = db.transaction(["boards", "settings"], "readonly");
+      const boardsReq = tx.objectStore("boards").getAll();
+      const activeReq = tx.objectStore("settings").get("activeBoardId");
+
+      tx.oncomplete = () => {
+        if (boardsReq.result && boardsReq.result.length > 0) {
+          boardsList = boardsReq.result;
+        } else {
+          boardsList = [{ id: "board_default", name: "Main Board" }];
+          saveBoardToDB(boardsList[0]);
+        }
+
+        if (activeReq.result && activeReq.result.value) {
+          activeBoardId = activeReq.result.value;
+        } else {
+          activeBoardId = boardsList[0].id;
+        }
+
+        updateBoardDropdown();
+        loadActiveBoardLayout();
+      };
+    }
+
+    function saveBoardToDB(boardObj) {
+      if (!db) return;
+      const tx = db.transaction("boards", "readwrite");
+      tx.objectStore("boards").put(boardObj);
+    }
+
+    function saveActiveBoardSetting() {
+      if (!db) return;
+      const tx = db.transaction("settings", "readwrite");
+      tx.objectStore("settings").put({ key: "activeBoardId", value: activeBoardId });
+    }
+
+    function saveLayout() {
+      if (!db) return;
+      const tx = db.transaction("settings", "readwrite");
+      tx.objectStore("settings").put({ key: `layout_${activeBoardId}`, value: [...tileOrder] });
+    }
+
+    function loadActiveBoardLayout() {
+      stopAllAudio();
+      if (!db) return renderGrid();
+      const tx = db.transaction("settings", "readonly");
+      const req = tx.objectStore("settings").get(`layout_${activeBoardId}`);
+      req.onsuccess = () => {
+        if (req.result && Array.isArray(req.result.value) && req.result.value.length > 0) {
+          tileOrder = req.result.value;
+        } else {
+          tileOrder = [...DEFAULT_TILE_IDS];
+          saveLayout();
+        }
+        renderGrid();
+      };
+      req.onerror = () => renderGrid();
+    }
+
+    function saveSound(tileId, customTitle, fileName, blob, isLooping, volume) {
+      if (!db) return;
+      const compositeKey = `${activeBoardId}_${tileId}`;
+      const tx = db.transaction("sounds", "readwrite");
+      tx.objectStore("sounds").put({ 
+        compositeKey, 
+        tileId, 
+        boardId: activeBoardId, 
+        customTitle, 
+        fileName, 
+        blob, 
+        isLooping,
+        volume: (volume !== undefined) ? volume : 1.0
+      });
+    }
+
+    function deleteSound(tileId) {
+      if (!db) return;
+      const compositeKey = `${activeBoardId}_${tileId}`;
+      const tx = db.transaction("sounds", "readwrite");
+      tx.objectStore("sounds").delete(compositeKey);
+    }
+
+    function updateBoardDropdown() {
+      boardSelect.innerHTML = "";
+      boardsList.forEach(b => {
+        const opt = document.createElement("option");
+        opt.value = b.id;
+        opt.textContent = b.name;
+        if (b.id === activeBoardId) opt.selected = true;
+        boardSelect.appendChild(opt);
+      });
+    }
+
+    boardSelect.addEventListener("change", (e) => {
+      activeBoardId = e.target.value;
+      saveActiveBoardSetting();
+      loadActiveBoardLayout();
+    });
+
+    newBoardBtn.addEventListener("click", () => {
+      const name = prompt("Enter a name for the new board:", `Board ${boardsList.length + 1}`);
+      if (!name) return;
+
+      const newId = `board_${Date.now()}`;
+      const newBoard = { id: newId, name: name };
+      
+      boardsList.push(newBoard);
+      saveBoardToDB(newBoard);
+      
+      activeBoardId = newId;
+      tileOrder = [...DEFAULT_TILE_IDS];
+      saveLayout();
+      saveActiveBoardSetting();
+      
+      updateBoardDropdown();
+      renderGrid();
+    });
+
+    renameBoardBtn.addEventListener("click", () => {
+      const currentBoard = boardsList.find(b => b.id === activeBoardId);
+      if (!currentBoard) return;
+
+      const newName = prompt("Rename current board:", currentBoard.name);
+      if (!newName || newName.trim() === "") return;
+
+      currentBoard.name = newName.trim();
+      saveBoardToDB(currentBoard);
+      updateBoardDropdown();
+    });
+
+    deleteBoardBtn.addEventListener("click", () => {
+      if (boardsList.length <= 1) {
+        alert("You must keep at least one soundboard!");
+        return;
+      }
+
+      if (confirm(`Are you sure you want to delete this entire board and all its sounds?`)) {
+        if (db) {
+          const tx = db.transaction(["boards", "settings", "sounds"], "readwrite");
+          
+          tx.objectStore("boards").delete(activeBoardId);
+          tx.objectStore("settings").delete(`layout_${activeBoardId}`);
+
+          const soundStore = tx.objectStore("sounds");
+          const index = soundStore.index("boardId");
+          const req = index.openKeyCursor(IDBKeyRange.only(activeBoardId));
+          
+          req.onsuccess = (e) => {
+            const cursor = e.target.result;
+            if (cursor) {
+              soundStore.delete(cursor.primaryKey);
+              cursor.continue();
+            }
+          };
+        }
+
+        boardsList = boardsList.filter(b => b.id !== activeBoardId);
+        activeBoardId = boardsList[0].id;
+        saveActiveBoardSetting();
+        updateBoardDropdown();
+        loadActiveBoardLayout();
+      }
+    });
+
+    function moveTile(tileId, direction) {
+      const idx = tileOrder.indexOf(tileId);
+      if (idx === -1) return;
+
+      const targetIdx = idx + direction;
+      if (targetIdx >= 0 && targetIdx < tileOrder.length) {
+        const temp = tileOrder[idx];
+        tileOrder[idx] = tileOrder[targetIdx];
+        tileOrder[targetIdx] = temp;
+
+        saveLayout();
+        renderGrid();
+      }
+    }
+
+    function renderGrid() {
+      stopAllAudio();
+      grid.innerHTML = "";
+      tileOrder.forEach(id => createTile(id));
+      createAddButton();
+    }
+
+    function createTile(tileId) {
+      const tile = document.createElement('div');
+      tile.className = 'tile';
+      tile.dataset.id = tileId;
+
+      const defaultLabel = tileId.startsWith("tile_") && !isNaN(tileId.split("_")[1]) 
+        ? `Tile ${tileId.split("_")[1]}` 
+        : `Custom Tile`;
+
+      tile.innerHTML = `
+        <button class="delete-btn">&times;</button>
+        <div class="reorder-controls" onclick="event.stopPropagation()">
+          <button class="reorder-btn move-left">◀</button>
+          <button class="reorder-btn move-right">▶</button>
+        </div>
+        <div style="width: 100%;">
+          <input type="text" class="tile-title-input" value="${defaultLabel}" maxlength="24" ${isUnlocked ? '' : 'readonly'}>
+          <div class="original-filename"></div>
+          <div class="status">Tap to select audio</div>
+        </div>
+        <div class="controls">
+          <div class="volume-container" onclick="event.stopPropagation()">
+            🔊 <input type="range" class="volume-slider" min="0" max="1" step="0.05" value="1.0">
+          </div>
+          <label class="loop-toggle" onclick="event.stopPropagation()">
+            <input type="checkbox" class="loop-checkbox"> Loop
+          </label>
+        </div>
+        <input type="file" accept="audio/*">
+      `;
+
+      const fileInput = tile.querySelector('input[type="file"]');
+      const loopCheckbox = tile.querySelector('.loop-checkbox');
+      const volumeSlider = tile.querySelector('.volume-slider');
+      const statusLabel = tile.querySelector('.status');
+      const nameInput = tile.querySelector('.tile-title-input');
+      const fileNameLabel = tile.querySelector('.original-filename');
+      const deleteBtn = tile.querySelector('.delete-btn');
+      const moveLeftBtn = tile.querySelector('.move-left');
+      const moveRightBtn = tile.querySelector('.move-right');
+
+      let audioBuffer = null;
+      let audioBlob = null;
+      let activeSource = null;
+      let activeGainNode = null;
+      let isPlaying = false;
+      let storedFileName = "";
+
+      nameInput.addEventListener('click', (e) => e.stopPropagation());
+      nameInput.addEventListener('change', () => {
+        let cleanName = nameInput.value.trim();
+        if (cleanName.length > 24) cleanName = cleanName.substring(0, 24);
+        nameInput.value = cleanName || defaultLabel;
+        saveSound(tileId, nameInput.value, storedFileName, audioBlob, loopCheckbox.checked, parseFloat(volumeSlider.value));
+      });
+
+      moveLeftBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        moveTile(tileId, -1);
+      });
+
+      moveRightBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        moveTile(tileId, 1);
+      });
+
+      if (db) {
+        const compositeKey = `${activeBoardId}_${tileId}`;
+        const tx = db.transaction("sounds", "readonly");
+        const req = tx.objectStore("sounds").get(compositeKey);
+        req.onsuccess = () => {
+          if (req.result) {
+            audioBlob = req.result.blob;
+            nameInput.value = req.result.customTitle || req.result.name || defaultLabel;
+            storedFileName = req.result.fileName || req.result.name || "";
+            fileNameLabel.textContent = storedFileName ? `📁 ${storedFileName}` : "";
+            loopCheckbox.checked = !!req.result.isLooping;
+            volumeSlider.value = (req.result.volume !== undefined) ? req.result.volume : 1.0;
+            statusLabel.textContent = "Loading...";
+
+            let reader = new FileReader();
+            reader.onload = (e) => {
+              audioCtx.decodeAudioData(e.target.result, (buf) => {
+                audioBuffer = buf;
+                statusLabel.textContent = "Ready";
+              });
+              reader = null;
+            };
+            reader.readAsArrayBuffer(audioBlob);
+          }
+        };
+      }
+
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (activeSource) {
+          try {
+            activeSource.stop();
+            activeSource.disconnect();
+            if (activeGainNode) activeGainNode.disconnect();
+            activeAudioNodes.delete({ source: activeSource, gainNode: activeGainNode });
+          } catch(err) {}
+        }
+        tileOrder = tileOrder.filter(id => id !== tileId);
+        deleteSound(tileId);
+        saveLayout();
+        renderGrid();
+      });
+
+      loopCheckbox.addEventListener('change', () => {
+        saveSound(tileId, nameInput.value, storedFileName, audioBlob, loopCheckbox.checked, parseFloat(volumeSlider.value));
+      });
+
+      volumeSlider.addEventListener('input', () => {
+        const newVol = parseFloat(volumeSlider.value);
+        if (activeGainNode) {
+          activeGainNode.gain.setValueAtTime(newVol, audioCtx.currentTime);
+        }
+      });
+
+      volumeSlider.addEventListener('change', () => {
+        saveSound(tileId, nameInput.value, storedFileName, audioBlob, loopCheckbox.checked, parseFloat(volumeSlider.value));
+      });
+
+      let holdTimer;
+      tile.addEventListener('touchstart', () => {
+        if (!isUnlocked) holdTimer = setTimeout(() => fileInput.click(), 600);
+      });
+      tile.addEventListener('touchend', () => clearTimeout(holdTimer));
+
+      tile.addEventListener('click', (e) => {
+        if (isUnlocked || e.target.closest('.controls') || e.target.closest('.delete-btn') || e.target.closest('.reorder-controls') || e.target.closest('.tile-title-input')) return;
+
+        if (!audioBuffer) {
+          fileInput.click();
+          return;
+        }
+
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
+        if (isPlaying) {
+          if (activeSource) {
+            try {
+              activeSource.stop();
+              activeSource.disconnect();
+              if (activeGainNode) activeGainNode.disconnect();
+            } catch(err) {}
+            activeSource = null;
+            activeGainNode = null;
+          }
+          isPlaying = false;
+          tile.classList.remove('active');
+        } else {
+          activeSource = audioCtx.createBufferSource();
+          activeGainNode = audioCtx.createGain();
+
+          activeSource.buffer = audioBuffer;
+          activeSource.loop = loopCheckbox.checked;
+
+          activeGainNode.gain.setValueAtTime(parseFloat(volumeSlider.value), audioCtx.currentTime);
+
+          activeSource.connect(activeGainNode);
+          activeGainNode.connect(audioCtx.destination);
+          
+          const audioPair = { source: activeSource, gainNode: activeGainNode };
+          activeAudioNodes.add(audioPair);
+
+          activeSource.onended = () => {
+            if (activeSource) {
+              try {
+                activeSource.disconnect();
+                if (activeGainNode) activeGainNode.disconnect();
+              } catch(e) {}
+              activeAudioNodes.delete(audioPair);
+              activeSource = null;
+              activeGainNode = null;
+            }
+            isPlaying = false;
+            tile.classList.remove('active');
+          };
+
+          activeSource.start(0);
+          isPlaying = true;
+          tile.classList.add('active');
+        }
+      });
+
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        let cleanFileName = file.name.replace(/\.[^/.]+$/, "");
+
+        storedFileName = cleanFileName;
+        fileNameLabel.textContent = `📁 ${storedFileName}`;
+
+        if (!nameInput.value || nameInput.value.startsWith("Tile ")) {
+          let shortTitle = storedFileName.length > 24 ? storedFileName.substring(0, 24).trim() : storedFileName;
+          nameInput.value = shortTitle;
+        }
+
+        statusLabel.textContent = "Saving...";
+        audioBlob = file;
+
+        saveSound(tileId, nameInput.value, storedFileName, audioBlob, loopCheckbox.checked, parseFloat(volumeSlider.value));
+
+        let reader = new FileReader();
+        reader.onload = (evt) => {
+          audioCtx.decodeAudioData(evt.target.result, (buf) => {
+            audioBuffer = buf;
+            statusLabel.textContent = "Ready";
+          });
+          reader = null;
+        };
+        reader.readAsArrayBuffer(file);
+      });
+
+      grid.appendChild(tile);
+    }
+
+    function createAddButton() {
+      const addBtn = document.createElement('div');
+      addBtn.className = 'tile add-tile-btn';
+      addBtn.innerHTML = `＋ Add Tile`;
+      addBtn.addEventListener('click', () => {
+        const newTileId = `tile_${Date.now()}`;
+        tileOrder.push(newTileId);
+        saveLayout();
+        renderGrid();
+      });
+      grid.appendChild(addBtn);
+    }
+
+    clearStorageBtn.addEventListener('click', () => {
+      if (confirm("FINAL WARNING: Reset and permanently erase all soundboards?")) {
+        stopAllAudio();
+        if (db) db.close();
+        indexedDB.deleteDatabase("MultiBoardSoundboardDB_v5");
+        location.reload();
+      }
+    });
+  </script>
+</body>
+</html>
